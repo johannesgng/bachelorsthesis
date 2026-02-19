@@ -66,7 +66,7 @@ The entire analysis is controlled centrally via the **`main.R`** file. So no nee
 1.  Open `main.R` in RStudio.
 2.  Adjust the working directory path at the top of the file:
     ~~~r
-    project_path <- 'SET PROJECT PATH'
+    project_path <- '[SET PROJECT PATH]'
     setwd(project_path)
     ~~~
 3.  Use the **Flags (TRUE/FALSE)** to decide which parts of the pipeline to execute:
