@@ -6,6 +6,7 @@ This repository contains the R code for the statistical analysis, modeling, and 
 
 The project follows a modular structure to separate data preparation, modeling, and evaluation.
 
+<pre> ```text
 Code_BA/
 │
 ├── main.R                     # Master Control Script (Orchestrator)
@@ -39,7 +40,7 @@ Code_BA/
     ├── EntireAnalyis.R        # Development script that contains everything in one script (VAR-GARCH, Benchmarks, Scoring)
     ├── Plots&DescriptiveStats.R # Contains Calcluations and Plots for chapter 3 "Data"
     └── Dunkelflaute_Mockert.R # Dark Doldrum Analysis of complete data
-    
+``` </pre>   
 ~~~
 
 ## Installation & Prerequisites
