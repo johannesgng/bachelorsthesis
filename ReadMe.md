@@ -59,14 +59,15 @@ This installs necessary packages such as `tidyverse`, `rugarch`, `vars`, `foreca
 
 ## Pipeline
 
-The entire analysis is controlled centrally via the **`main.R`** file. You do not need to run the scripts in the `scripts/` folder individually.
+The entire analysis is controlled centrally via the **`main.R`** file. So no need to run the scripts in the `scripts/` folder individually.
 
 ### Steps:
 
 1.  Open `main.R` in RStudio.
 2.  Adjust the working directory path at the top of the file:
     ~~~r
-    setwd('/Path/to/your/Code_BA')
+    project_path <- 'SET PROJECT PATH'
+    setwd(project_path)
     ~~~
 3.  Use the **Flags (TRUE/FALSE)** to decide which parts of the pipeline to execute:
 
