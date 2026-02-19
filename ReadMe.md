@@ -6,7 +6,7 @@ This repository contains the R code for the statistical analysis, modeling, and 
 
 The project follows a modular structure to separate data preparation, modeling, and evaluation.
 
-<pre> ```text
+<pre> ```
 Code_BA/
 │
 ├── main.R                     # Master Control Script (Orchestrator)
