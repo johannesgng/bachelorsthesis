@@ -87,10 +87,13 @@ my_colors <- c(
 # 6.1 Stratify on Forecasted Dark Doldrum Probability --------------------------
 cat("Stratify on Forecasted Dark Doldrum Probability... \n")
 probs_var <- h48_mean_scatter(ensembles_var_garch, energy_test, threshold) %>% dplyr::select(date, prob_var = prob)
-
 probs_anen <- h48_mean_scatter(ensembles_anen, energy_test, threshold) %>%dplyr::select(date, prob_anen = prob)
-
 probs_naive <- h48_mean_scatter(ensembles_naive, energy_test, threshold) %>% dplyr::select(date, prob_naive = prob)
+
+mean_combined <- data.frame(
+  date = probs_var$date,
+  prob_combined = (probs_var$prob_var + probs_anen$prob_anen + probs_naive$prob_naive) / 3
+)
 
 strat_df <- scoring_var_garch %>%
   dplyr::select(date, es_var = es_bivar) %>%
@@ -99,6 +102,7 @@ strat_df <- scoring_var_garch %>%
   left_join(probs_var, by = "date") %>%
   left_join(probs_anen, by = "date") %>%
   left_join(probs_naive, by = "date") %>%
+  left_join(mean_combined, by = "date") %>%
   inner_join(energy_test %>% dplyr::select(date, dark_doldrum), by = "date")
 
 strat_df <- strat_df[-1,] # Remove first row, since there is NA due to 48h mean
@@ -123,9 +127,9 @@ calc_stratified_score <- function(data, prob_col, es_col, model_label) {
 }
 
 # Apply to all models
-res_var   <- calc_stratified_score(strat_df, "prob_var", "es_var", "VAR-GARCH")
-res_anen  <- calc_stratified_score(strat_df, "prob_anen", "es_anen", "AnEn")
-res_naive <- calc_stratified_score(strat_df, "prob_naive", "es_naive", "Climatology")
+(res_var <- calc_stratified_score(strat_df, "prob_combined", "es_var", "VAR-GARCH"))
+(res_anen <- calc_stratified_score(strat_df, "prob_combined", "es_anen", "AnEn"))
+(res_naive <- calc_stratified_score(strat_df, "prob_combined", "es_naive", "Climatology"))
 
 # Combine results
 stratified_results <- bind_rows(res_var, res_anen, res_naive)
@@ -153,16 +157,23 @@ get_ens_mean_demand <- function(ens_list) {
   sapply(ens_list, function(mat) mean(mat[, 1]))
 }
 
-fc_demand_var   <- get_ens_mean_demand(ensembles_var_garch)
-fc_demand_anen  <- get_ens_mean_demand(ensembles_anen)
-fc_demand_naive <- get_ens_mean_demand(ensembles_naive) 
+get_ens_median_demand <- function(ens_list){
+  sapply(ens_list, function(mat) median(mat[,1]))
+}
+
+# Median from each model
+fc_demand_var_median <- as.data.frame(get_ens_median_demand(ensembles_var_garch))
+fc_demand_anen_median <- as.data.frame(get_ens_median_demand(ensembles_anen))
+fc_demand_naive_median <- as.data.frame(get_ens_median_demand(ensembles_naive))
+
+fc_demand_median_mean <- (fc_demand_var_median + fc_demand_anen_median + fc_demand_naive_median) / 3
+colnames(fc_demand_median_mean) <- "fc_demand_median_mean"
+
 
 demand_eval_df <- tibble(
   date = energy_test$date,
   # Forecasted Demand
-  fc_var   = fc_demand_var,
-  fc_anen  = fc_demand_anen,
-  fc_naive = fc_demand_naive,
+  fc_median_mean = fc_demand_median_mean$fc_demand_median_mean,
   # ES (Trivariate)
   es_var   = scoring_var_garch$es_trivar,
   es_anen  = scoring_anen$es_trivar,
@@ -194,11 +205,10 @@ calc_demand_strat <- function(data, fc_col, es_col, model_label) {
 }
 
 # Apply to all models
-res_demand_var   <- calc_demand_strat(demand_eval_df, "fc_var",   "es_var",   "VAR-GARCH")
-res_demand_anen  <- calc_demand_strat(demand_eval_df, "fc_anen",  "es_anen",  "AnEn")
-res_demand_naive <- calc_demand_strat(demand_eval_df, "fc_naive", "es_naive", "Climatology")
+(res_demand_var <- calc_demand_strat(demand_eval_df, "fc_median_mean", "es_var", "VAR-GARCH"))
+(res_demand_anen <- calc_demand_strat(demand_eval_df, "fc_median_mean", "es_anen", "AnEn"))
+(res_demand_naive <- calc_demand_strat(demand_eval_df, "fc_median_mean", "es_naive", "Climatology"))
 
-# Combine results
 demand_results <- bind_rows(res_demand_var, res_demand_anen, res_demand_naive)
 print(demand_results)
 
@@ -231,10 +241,10 @@ prepare_model_df <- function(dates, fc_demand, fc_prob, es_score, model_name) {
   )
 }
 
-# Apply to all models
-df_var <- prepare_model_df(energy_test$date, fc_demand_var, probs_var$prob_var, scoring_var_garch$es_trivar, "VAR-GARCH")
-df_anen <- prepare_model_df(energy_test$date, fc_demand_anen, probs_anen$prob_anen, scoring_anen$es_trivar, "AnEn")
-df_naive <- prepare_model_df(energy_test$date, fc_demand_naive, probs_naive$prob_naive, scoring_naive$es_trivar, "Climatology")
+# Apply to all models in Median Mean Demand and Mean Dark Doldrum Probability
+df_var <- prepare_model_df(energy_test$date, fc_demand_median_mean$fc_demand_median_mean, strat_df$prob_combined, scoring_var_garch$es_trivar, "VAR-GARCH")
+df_anen <- prepare_model_df(energy_test$date, fc_demand_median_mean$fc_demand_median_mean, strat_df$prob_combined, scoring_anen$es_trivar, "AnEn")
+df_naive <- prepare_model_df(energy_test$date, fc_demand_median_mean$fc_demand_median_mean, strat_df$prob_combined, scoring_naive$es_trivar, "Climatology")
 
 calc_double_strat <- function(df_model) {
   
